@@ -1,0 +1,192 @@
+openapi: 3.0.1
+info:
+  description: This is a mail test service server . For this sample, you can use the
+    api key `special-key` to test the authorization filters.
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  title: OpenAPI mail test service
+  version: 1.0.0
+servers:
+- url: localhost:3001/v1
+tags:
+- description: Send a mail
+  name: mail
+paths:
+  /user:
+    post:
+      description: This can only be done by the logged in user.
+      operationId: createUser
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/User'
+        description: Created user object
+        required: true
+      responses:
+        default:
+          content: {}
+          description: successful operation
+      summary: Create user
+      tags:
+      - user
+      x-codegen-request-body-name: body
+      x-openapi-router-controller: UserController
+      x-openapi-router-service: UserService
+  /user/login:
+    post:
+      operationId: loginUser
+      parameters:
+      - description: The user name for login
+        explode: true
+        in: query
+        name: username
+        required: true
+        schema:
+          type: string
+        style: form
+      - description: The password for login in clear text
+        explode: true
+        in: query
+        name: password
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/xml:
+              schema:
+                type: string
+            application/json:
+              schema:
+                type: string
+          description: successful operation
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              explode: false
+              schema:
+                format: int32
+                type: integer
+              style: simple
+            X-Expires-After:
+              description: date in UTC when toekn expires
+              explode: false
+              schema:
+                format: date-time
+                type: string
+              style: simple
+        "400":
+          content: {}
+          description: Invalid username/password supplied
+      summary: Logs user into the system
+      tags:
+      - user
+      x-openapi-router-controller: UserController
+      x-openapi-router-service: UserService
+  /user/logout:
+    post:
+      operationId: logoutUser
+      responses:
+        default:
+          content: {}
+          description: successful operation
+      summary: Logs out current logged in user session
+      tags:
+      - user
+      x-openapi-router-controller: UserController
+      x-openapi-router-service: UserService
+  /mail:
+    post:
+      operationId: sendMail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Mail'
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/Mail'
+        description: Mail address need to send message
+        required: true
+      responses:
+        "405":
+          content: {}
+          description: Invalid input
+      security:
+      - send_mail_auth:
+        - write:mails
+        - read:mails
+      summary: Send a mail
+      tags:
+      - mail
+      x-codegen-request-body-name: body
+      x-openapi-router-controller: MailController
+      x-openapi-router-service: MailService
+components:
+  schemas:
+    Mail:
+      description: Send a Mail to the address
+      example:
+        to: example@email.com
+      properties:
+        to:
+          format: email
+          type: string
+      required:
+      - to
+      title: a Mail
+      type: object
+      xml:
+        name: Mail
+    User:
+      description: A User
+      example:
+        firstName: firstName
+        lastName: lastName
+        password: password
+        userStatus: 6
+        phone: phone
+        id: 0
+        email: email
+        username: username
+      properties:
+        id:
+          format: int64
+          type: integer
+        username:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        userStatus:
+          description: User Status
+          format: int32
+          type: integer
+      title: a User
+      type: object
+      xml:
+        name: User
+  securitySchemes:
+    send_mail_auth:
+      flows:
+        implicit:
+          authorizationUrl: localhost:3001/v1
+          scopes:
+            write:mails: modify your mails
+            read:mails: read your sent mails
+      type: oauth2
+    api_key:
+      in: header
+      name: api_key
+      type: apiKey
